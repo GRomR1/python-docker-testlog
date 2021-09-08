@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-testlog
+  namespace: default
+  labels:
+    name: python-testlog
+    app.kubernetes.io/name: python-testlog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: python-testlog
+  template:
+    metadata:
+      labels:
+        name: python-testlog
+        app.kubernetes.io/name: python-testlog
+    spec:
+      tolerations:
+      - key: node.kubernetes.io/unschedulable
+        effect: NoSchedule
+      containers:
+      - name: app
+        image: registry.example.com/python-testlog:latest
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+      terminationGracePeriodSeconds: 30
+      nodeSelector:
+        kubernetes.io/hostname: gpu2
+      

@@ -1,0 +1,69 @@
+version: '3.7'
+
+services:
+  app:
+    build: ./app
+    volumes:
+     - ./app:/app
+    container_name: app
+    restart: unless-stopped
+    stop_signal: SIGINT
+    stop_grace_period: 10s
+    networks:
+      - testlog
+    depends_on:
+      - fluentd
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.app
+        fluentd-async-connect: "true"
+
+  fluentd:
+    build: ./fluentd
+    container_name: fluentd
+    restart: unless-stopped
+    hostname: fluentd-app
+    networks:
+      - testlog
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+      # - "9880:9880"
+    volumes:
+      - ./fluentd/fluent.conf:/fluentd/etc/fluent.conf
+      - ./logs:/var/log/fluentd
+    logging:
+     driver: "json-file"
+     options:
+       max-size: "10m"
+
+  logrotate:
+    image: blacklabelops/logrotate:1.3
+    container_name: logrotate
+    restart: unless-stopped
+    stop_grace_period: 10s
+    environment:
+      LOGS_DIRECTORIES: /var/log/fluentd
+      LOGROTATE_PARAMETERS: vf # commandline parameters: v: Verbose, f: Force
+      LOGROTATE_COMPRESSION: compress # default: nocompress
+      LOGROTATE_INTERVAL: daily
+      LOGROTATE_COPIES: 14
+      LOGROTATE_SIZE: 100M
+      LOGROTATE_STATUSFILE: /logrotate/logrotate.status # remember when files have been rotated when using time intervals
+      LOGROTATE_DATEFORMAT: ".%Y-%m-%d"
+      # LOGROTATE_CRONSCHEDULE: "0 * * * * *" # every minute (debug)
+      # LOGROTATE_DATEFORMAT: ".%Y-%m-%d--%H-%M" # with hours and minutes (debug)
+    networks:
+      - testlog
+    volumes:
+      - ./logs:/var/log/fluentd
+    logging:
+     driver: "json-file"
+     options:
+       max-size: "10m"
+
+networks:
+  testlog:
+    name: testlog
